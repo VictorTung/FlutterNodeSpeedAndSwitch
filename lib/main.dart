@@ -76,7 +76,6 @@ class Home extends GetView<ListController> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    // Passing null automatically disables the button elegantly
                     onPressed: controller.isTesting.value
                         ? null
                         : controller.runSpeedTest,
@@ -85,7 +84,13 @@ class Home extends GetView<ListController> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text("測速時間", style: TextStyle(color: Colors.grey.shade500)),
+                    Text(
+                      "測速時間",
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 10,
+                      ),
+                    ),
                     Obx(
                       () => Text(
                         controller.lastTestTime.value.isEmpty
@@ -111,16 +116,22 @@ class Home extends GetView<ListController> {
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                label: const Text(
-                  '複製測速結果',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-                onPressed: controller.copyNodesToClipboard,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.blue.shade600,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: Obx(
+                () => FilledButton.icon(
+                  label: const Text(
+                    '複製測速結果',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  onPressed: controller.isTesting.value
+                      ? null
+                      : controller.copyNodesToClipboard,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: controller.isTesting.value
+                        ? Colors.grey.shade400
+                        : Colors.blue.shade600,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
@@ -150,16 +161,19 @@ class NodeTile extends GetView<ListController> {
       final node = controller.nodeList[index];
       final statusColor = node.isNormal
           ? Colors.green.shade400
+          : node.isTesting
+          ? Colors.grey.shade500
           : Colors.red.shade400;
 
       return InkWell(
-        onTap: () => controller.selectNode(index),
+        onTap: () =>
+            controller.isTesting.value ? null : controller.selectNode(index),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
           child: Row(
             children: [
               Text(node.name),
-              const Spacer(), // Replaces hardcoded spacing that breaks on small screens
+              const Spacer(),
               Icon(Icons.circle, size: 10, color: statusColor),
               const SizedBox(width: 10),
               Expanded(
@@ -188,7 +202,12 @@ class NodeTile extends GetView<ListController> {
 
 class ListController extends GetxController {
   final RxList<Node> nodeList = <Node>[
-    const Node(url: "https://www.google.com.hk", name: '節點01', status: "未知"),
+    const Node(
+      url: "https://www.google.com.hk",
+      name: '節點01',
+      status: "未知",
+      isSelected: true,
+    ),
     const Node(url: "https://hk.yahoo.com", name: '節點02', status: "未知"),
     const Node(url: "http://bremsregelungen.xyz", name: '節點03', status: "未知"),
     const Node(url: "https://www.bing.com", name: '節點04', status: "未知"),
@@ -208,26 +227,29 @@ class ListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    runSpeedTest(); // Correctly executes async on startup
+    runSpeedTest();
   }
 
   Future<void> runSpeedTest() async {
     if (isTesting.value) return;
-    isTesting.value = true;
-
-    // 1. Reset all states to default values
-    for (var i = 0; i < nodeList.length; i++) {
-      nodeList[i] = nodeList[i].copyWith(status: '未知', isSelected: false);
-    }
-
-    // 2. Measure sequential latency
-    for (var i = 0; i < nodeList.length; i++) {
-      nodeList[i] = await _pingNode(nodeList[i]);
-    }
 
     lastTestTime.value = DateFormat(
       'yyyy-MM-dd HH:mm:ss',
     ).format(DateTime.now());
+
+    isTesting.value = true;
+
+    for (var i = 0; i < nodeList.length; i++) {
+      nodeList[i] = nodeList[i].copyWith(
+        status: '測速中',
+        isSelected: nodeList[i].isSelected,
+      );
+    }
+
+    for (var i = 0; i < nodeList.length; i++) {
+      nodeList[i] = await _pingNode(nodeList[i]);
+    }
+
     isTesting.value = false;
   }
 
@@ -237,7 +259,6 @@ class ListController extends GetxController {
       debugPrint("Pinging: ${node.url}");
       final uriParsed = Uri.parse(node.url);
 
-      // Using HTTP HEAD instead of GET avoids downloading the payload
       await http.head(uriParsed).timeout(const Duration(seconds: 5));
       stopwatch.stop();
 
@@ -265,15 +286,7 @@ class ListController extends GetxController {
 
     await Clipboard.setData(ClipboardData(text: formattedString));
 
-    Get.snackbar(
-      'Copied',
-      'Node status report copied to clipboard!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.black87,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 2),
-    );
+    ToastHelper.show("已複製");
   }
 }
 
@@ -295,9 +308,8 @@ class Node {
     this.isSelected = false,
   });
 
-  // Business logic helper getters keeping the UI clean of Regex checks
   bool get isNormal => status.startsWith('正常');
-  bool get isUnknown => status.toLowerCase() == '未知';
+  bool get isTesting => status.toLowerCase() == '測速中';
 
   Node copyWith({String? url, String? name, String? status, bool? isSelected}) {
     return Node(
@@ -306,5 +318,55 @@ class Node {
       status: status ?? this.status,
       isSelected: isSelected ?? this.isSelected,
     );
+  }
+}
+
+class ToastHelper {
+  static OverlayEntry? _currentToast;
+
+  static void show(String message) {
+    _currentToast?.remove();
+    _currentToast = null;
+
+    final overlay = Get.key.currentState?.overlay;
+    if (overlay == null) return;
+
+    final newToast = OverlayEntry(
+      builder: (context) => IgnorePointer(
+        child: Align(
+          alignment: Alignment.center,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    _currentToast = newToast;
+    overlay.insert(newToast);
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (_currentToast == newToast) {
+        _currentToast?.remove();
+        _currentToast = null;
+      }
+    });
   }
 }
