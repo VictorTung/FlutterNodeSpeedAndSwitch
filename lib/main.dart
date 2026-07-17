@@ -259,7 +259,7 @@ class ListController extends GetxController {
       debugPrint("Pinging: ${node.url}");
       final uriParsed = Uri.parse(node.url);
 
-      await http.head(uriParsed).timeout(const Duration(seconds: 5));
+      await http.head(uriParsed).timeout(const Duration(seconds: 1));
       stopwatch.stop();
 
       return node.copyWith(status: "正常 (${stopwatch.elapsedMilliseconds}ms)");
