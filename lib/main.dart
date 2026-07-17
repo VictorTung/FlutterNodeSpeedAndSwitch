@@ -7,7 +7,13 @@ import 'package:intl/intl.dart';
 void main() {
   runApp(
     GetMaterialApp(
-      // Bind the controller cleanly at startup
+      theme: ThemeData(
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
+      ),
       initialBinding: BindingsBuilder(() {
         Get.put(ListController());
       }),
@@ -29,12 +35,15 @@ class Home extends GetView<ListController> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_sharp),
+          icon: const Icon(Icons.arrow_back_ios_new_sharp, size: 18),
           onPressed: () => debugPrint('Back tapped!'),
         ),
-        title: const Text("Node Switch"),
+        title: const Text(
+          "節點切換",
+          style: TextStyle(fontWeight: FontWeight(500), fontSize: 16),
+        ),
       ),
-      body: Padding(
+      body: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
@@ -45,12 +54,12 @@ class Home extends GetView<ListController> {
                   () => OutlinedButton.icon(
                     icon: Icon(
                       Icons.speed,
-                      size: 20,
+                      size: 16,
                       color: controller.isTesting.value
                           ? Colors.grey.shade600
                           : Colors.blue.shade600,
                     ),
-                    label: const Text("Speed Test"),
+                    label: const Text("手動測速"),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: controller.isTesting.value
                           ? Colors.grey.shade600
@@ -60,6 +69,12 @@ class Home extends GetView<ListController> {
                             ? Colors.grey.shade300
                             : Colors.blue.shade300,
                       ),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 10,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     // Passing null automatically disables the button elegantly
                     onPressed: controller.isTesting.value
@@ -70,16 +85,16 @@ class Home extends GetView<ListController> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      "test date time:",
-                      style: TextStyle(color: Colors.grey.shade500),
-                    ),
+                    Text("測速時間", style: TextStyle(color: Colors.grey.shade500)),
                     Obx(
                       () => Text(
                         controller.lastTestTime.value.isEmpty
                             ? 'Never tested'
                             : controller.lastTestTime.value,
-                        style: TextStyle(color: Colors.grey.shade700),
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ],
@@ -97,20 +112,25 @@ class Home extends GetView<ListController> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                icon: const Icon(Icons.copy),
-                label: const Text('Copy Results to Clipboard'),
+                label: const Text(
+                  '複製測速結果',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
                 onPressed: controller.copyNodesToClipboard,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: const Text(
-                "Refactored to enforce separation of concerns. UI stays dumb and pretty; logic stays smart and testable.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
+                "在使用應用時，如果遇到數據載入問題，你可以通過手動切換網路節點來提升存取體驗。\n\n網路節點測速的狀態提示分為三種：正常、異常和未知。這些狀態是根據你當前的網路情況而定的。你可以通過切換手機的網路類型（如4G/5G、WiFi）來手動測速網路節點的健康狀況，並選擇最適合你的節點。",
+                textAlign: TextAlign.start,
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],
@@ -138,14 +158,7 @@ class NodeTile extends GetView<ListController> {
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
           child: Row(
             children: [
-              Text(
-                node.name,
-                style: TextStyle(
-                  fontWeight: node.isSelected
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
-              ),
+              Text(node.name),
               const Spacer(), // Replaces hardcoded spacing that breaks on small screens
               Icon(Icons.circle, size: 10, color: statusColor),
               const SizedBox(width: 10),
@@ -175,38 +188,18 @@ class NodeTile extends GetView<ListController> {
 
 class ListController extends GetxController {
   final RxList<Node> nodeList = <Node>[
-    const Node(
-      url: "https://www.google.com.hk",
-      name: 'node01',
-      status: "unknown",
-    ),
-    const Node(url: "https://hk.yahoo.com", name: 'node02', status: "unknown"),
-    const Node(
-      url: "http://bremsregelungen.xyz",
-      name: 'node03',
-      status: "unknown",
-    ),
-    const Node(url: "https://www.bing.com", name: 'node04', status: "unknown"),
-    const Node(url: "https://1.1.1.1", name: 'node05', status: "unknown"),
-    const Node(url: "https://8.8.8.8", name: 'node06', status: "unknown"),
-    const Node(url: "https://www.baidu.com", name: 'node07', status: "unknown"),
-    const Node(url: "https://www.apple.com", name: 'node08', status: "unknown"),
-    const Node(url: "https://github.com", name: 'node09', status: "unknown"),
-    const Node(
-      url: "https://www.amazon.com",
-      name: 'node10',
-      status: "unknown",
-    ),
-    const Node(
-      url: "https://www.microsoft.com",
-      name: 'node11',
-      status: "unknown",
-    ),
-    const Node(
-      url: "https://www.wikipedia.org",
-      name: 'node12',
-      status: "unknown",
-    ),
+    const Node(url: "https://www.google.com.hk", name: '節點01', status: "未知"),
+    const Node(url: "https://hk.yahoo.com", name: '節點02', status: "未知"),
+    const Node(url: "http://bremsregelungen.xyz", name: '節點03', status: "未知"),
+    const Node(url: "https://www.bing.com", name: '節點04', status: "未知"),
+    const Node(url: "https://1.1.1.1", name: '節點05', status: "未知"),
+    const Node(url: "https://8.8.8.8", name: '節點06', status: "未知"),
+    const Node(url: "https://www.baidu.com", name: '節點07', status: "未知"),
+    const Node(url: "https://www.apple.com", name: '節點08', status: "未知"),
+    const Node(url: "https://github.com", name: '節點09', status: "未知"),
+    const Node(url: "https://www.amazon.com", name: '節點10', status: "未知"),
+    const Node(url: "https://www.microsoft.com", name: '節點11', status: "未知"),
+    const Node(url: "https://www.wikipedia.org", name: '節點12', status: "未知"),
   ].obs;
 
   final RxBool isTesting = false.obs;
@@ -224,7 +217,7 @@ class ListController extends GetxController {
 
     // 1. Reset all states to default values
     for (var i = 0; i < nodeList.length; i++) {
-      nodeList[i] = nodeList[i].copyWith(status: 'unknown', isSelected: false);
+      nodeList[i] = nodeList[i].copyWith(status: '未知', isSelected: false);
     }
 
     // 2. Measure sequential latency
@@ -248,13 +241,11 @@ class ListController extends GetxController {
       await http.head(uriParsed).timeout(const Duration(seconds: 5));
       stopwatch.stop();
 
-      return node.copyWith(
-        status: "normal (${stopwatch.elapsedMilliseconds}ms)",
-      );
+      return node.copyWith(status: "正常 (${stopwatch.elapsedMilliseconds}ms)");
     } catch (e) {
       debugPrint("Ping failed for ${node.url}: $e");
       stopwatch.stop();
-      return node.copyWith(status: "abnormal");
+      return node.copyWith(status: "異常");
     }
   }
 
@@ -305,8 +296,8 @@ class Node {
   });
 
   // Business logic helper getters keeping the UI clean of Regex checks
-  bool get isNormal => status.toLowerCase().startsWith('normal');
-  bool get isUnknown => status.toLowerCase() == 'unknown';
+  bool get isNormal => status.startsWith('正常');
+  bool get isUnknown => status.toLowerCase() == '未知';
 
   Node copyWith({String? url, String? name, String? status, bool? isSelected}) {
     return Node(
